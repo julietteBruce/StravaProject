@@ -25,77 +25,54 @@ import datetime
 #"refresh_token":"3084ecda19b970d28fca94b916cb3f44628ea8f6","access_token":"c8e2654387897cd5c652fb8a12f4026a2f69fefd",
 
 
-# auth_url = "https://www.strava.com/oauth/token"
-# activites_url = "https://www.strava.com/api/v3/athlete/activities"
-
-# payload = {
-#     'client_id': "99657",
-#     'client_secret': '15f516b9c11a1012cb946f137f989d3b83921af5',
-#     'refresh_token': '3084ecda19b970d28fca94b916cb3f44628ea8f6',
-#     'grant_type': "refresh_token",
-#     'f': 'json'
-# }
-
-# print("Requesting Token...\n")
-# res = requests.post(auth_url, data=payload, verify=False)
-# access_token = res.json()['access_token']
-# print("Access Token = {}\n".format(access_token))
-
-# header = {'Authorization': 'Bearer ' + access_token}
-# param = {'before':, 'after': }
-# my_dataset = requests.get(activites_url, headers=header, params=param).json()
 
 
+
+def getAccessToken(clientID,clientSecret,refreshToken):
+	authorization_url = "https://www.strava.com/oauth/token"
+	data = {
+		'client_id': str(clientID),
+    	'client_secret': clientSecret,
+    	'refresh_token': refreshToken,
+    	'grant_type': "refresh_token",
+    	'f': 'json'
+		}
+	res = requests.post(authorization_url, data=data)
+	return res.json()['access_token']
+
+clientID = 99657
+clientSecret = "15f516b9c11a1012cb946f137f989d3b83921af5"
+refreshToken = "3084ecda19b970d28fca94b916cb3f44628ea8f6"
+
+def getStravaActivitesForYear(year,accessToken):
+	startOfYearAsEpoch = datetime.datetime(year-1,12,30,0,0).timestamp()
+	endOfYearAsEpoch = datetime.datetime(year+1,1,2,0,0).timestamp()
+	activites_url = "https://www.strava.com/api/v3/athlete/activities"
+	header = {'Authorization': 'Bearer ' + accessToken}
+	param = {'before':endOfYearAsEpoch, 'after':startOfYearAsEpoch, 'per_page': 200}
+	my_dataset = requests.get(activites_url, headers=header, params=param).json()
+	return my_dataset
+
+accessToken = getAccessToken(clientID,clientSecret,refreshToken)
+X = getStravaActivitesForYear(2023,accessToken)
+print(X)
+
+
+# year = 2023
+# startOfYearAsEpoch = datetime.datetime(year-1,12,30,0,0).timestamp()
+# print(startOfYearAsEpoch)
+# todayAsEpoch = datetime.datetime.now().timestamp()
+# print(todayAsEpoch)
 
 # i = 0
-# while i < 10:
+# while i < len(my_dataset):
 # 	print(my_dataset[i]['start_date'])
 # 	print(my_dataset[i]['sport_type'])
 # 	print(my_dataset[i]['distance'])
 # 	print(my_dataset[i]['total_elevation_gain'])
 # 	i += 1
-# print(my_dataset[0]["name"])
-# print(my_dataset[0]["distance"])
+# print(len(my_dataset))
 
-year = 2023
-startOfYearAsEpoch = datetime.datetime(year-1,12,30,0,0).timestamp()
-print(startOfYearAsEpoch)
-todayAsEpoch = datetime.datetime.now().timestamp()
-print(todayAsEpoch)
+# sportTypes = {Run,TrailRun,Walk,Hike,RideackcountrySki,}
 
-auth_url = "https://www.strava.com/oauth/token"
-activites_url = "https://www.strava.com/api/v3/athlete/activities"
-
-payload = {
-    'client_id': "99657",
-    'client_secret': '15f516b9c11a1012cb946f137f989d3b83921af5',
-    'refresh_token': '3084ecda19b970d28fca94b916cb3f44628ea8f6',
-    'grant_type': "refresh_token",
-    'f': 'json'
-}
-
-print("Requesting Token...\n")
-res = requests.post(auth_url, data=payload, verify=False)
-access_token = res.json()['access_token']
-print("Access Token = {}\n".format(access_token))
-
-header = {'Authorization': 'Bearer ' + access_token}
-param = {'before':todayAsEpoch, 'after':startOfYearAsEpoch, 'per_page': 200}
-my_dataset = requests.get(activites_url, headers=header, params=param).json()
-
-i = 0
-while i < len(my_dataset):
-	print(my_dataset[i]['start_date'])
-	print(my_dataset[i]['sport_type'])
-	print(my_dataset[i]['distance'])
-	print(my_dataset[i]['total_elevation_gain'])
-	i += 1
-print(len(my_dataset))
-
-sportTypes = {Run,TrailRun,Walk,Hike,RideackcountrySki,}
-# print(datetime.datetime.strptime('2023-1-1', "%Y-%W-%w"))
-# print(datetime.strftime('2022 0 1', '%Y %W %w'))
-# print(datetime.strptime('2023 1 1', '%Y %W %w'))
-# print(time.asctime(time.strptime('2023 2 1', '%Y %W %w')))
-# print(time.asctime(time.strptime('2023 5 1', '%Y %W %w')))
 

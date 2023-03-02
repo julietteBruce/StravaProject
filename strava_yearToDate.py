@@ -40,7 +40,7 @@ def getStravaActivitesForYear(year,accessToken):
 	endOfYearAsEpoch = datetime.datetime(year+1,1,2,0,0).timestamp()
 	activites_url = "https://www.strava.com/api/v3/athlete/activities"
 	header = {'Authorization': 'Bearer ' + accessToken}
-	param = {'before':endOfYearAsEpoch, 'after':startOfYearAsEpoch, 'per_page': 200}
+	param = {'before':endOfYearAsEpoch, 'after':startOfYearAsEpoch, 'page': 1, 'per_page': 200}
 	my_dataset = requests.get(activites_url, headers=header, params=param).json()
 	return my_dataset
 
@@ -82,7 +82,7 @@ clientSecret = "15f516b9c11a1012cb946f137f989d3b83921af5"
 refreshToken = "3084ecda19b970d28fca94b916cb3f44628ea8f6"
 
 accessToken = getAccessToken(clientID,clientSecret,refreshToken)
-X = getStravaActivitesForYear(2023,accessToken)
+X = getStravaActivitesForYear(2022,accessToken)
 print(len(X))
 
 

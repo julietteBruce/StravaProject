@@ -49,7 +49,24 @@ def getStravaActivitesForYear(year,accessToken):
 
 accessToken = getAccessToken(clientID,clientSecret,refreshToken)
 X = getStravaActivitesForYear(2023,accessToken)
-print(X)
+print(len(X))
+
+def onlyDateTypesDistanceElevation(activity):
+	return {
+		'date': activity['start_date'],
+		'type': activity['type'],
+		'sport_type': activity['sport_type'],
+		'distance': activity['distance'],
+		'elevationGain': activity['total_elevation_gain']
+		}
+
+def onlyDateTypesDistanceElevationActivityList(activityList):
+	return [onlyDateTypesDistanceElevation(activity) for activity in activityList]
+
+Y = onlyDateTypesDistanceElevationActivityList(X)
+
+print(Y)
+
 
 
 # year = 2023

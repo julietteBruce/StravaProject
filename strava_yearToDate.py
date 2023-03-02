@@ -22,12 +22,6 @@ import datetime
 
 # print(response.text)
 
-#"refresh_token":"3084ecda19b970d28fca94b916cb3f44628ea8f6","access_token":"c8e2654387897cd5c652fb8a12f4026a2f69fefd",
-
-
-
-
-
 def getAccessToken(clientID,clientSecret,refreshToken):
 	authorization_url = "https://www.strava.com/oauth/token"
 	data = {

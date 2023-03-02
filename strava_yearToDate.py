@@ -1,5 +1,6 @@
 import requests
 import datetime
+import pandas
 ### 
 # Step 0: Go to https://www.strava.com/settings/apps and make sure your map is not listed in the "My Apps" tab. If it is listed click revoke access to revoke access. This is necesary as we need to reauthorize it to create a new token with read_all permissions. 
 # Step 1: Edit the URL below, replacing [Your Client Id Here] with the client id of your app. Then enter the URL below into your browser and hit enter
@@ -15,10 +16,10 @@ import datetime
 # base_url = 'https://www.strava.com/oauth/token?'
 # url = f"{base_url}client_id={client_id}&client_secret={client_secret}&code={code}&grant_type=authorization_code"
 # url2 = "https://www.strava.com/oauth/token?client_id=99657&client_secret=15f516b9c11a1012cb946f137f989d3b83921af5&code=ba125514163624d8b9181fc28912d74797a14194&grant_type=authorization_code"
-# payload={}
+# data={}
 # headers = {}
 
-# response = requests.request("POST", url, headers=headers, data=payload)
+# response = requests.request("POST", url, headers=headers, data=data)
 
 # print(response.text)
 
@@ -34,10 +35,6 @@ def getAccessToken(clientID,clientSecret,refreshToken):
 	res = requests.post(authorization_url, data=data)
 	return res.json()['access_token']
 
-clientID = 99657
-clientSecret = "15f516b9c11a1012cb946f137f989d3b83921af5"
-refreshToken = "3084ecda19b970d28fca94b916cb3f44628ea8f6"
-
 def getStravaActivitesForYear(year,accessToken):
 	startOfYearAsEpoch = datetime.datetime(year-1,12,30,0,0).timestamp()
 	endOfYearAsEpoch = datetime.datetime(year+1,1,2,0,0).timestamp()
@@ -47,13 +44,30 @@ def getStravaActivitesForYear(year,accessToken):
 	my_dataset = requests.get(activites_url, headers=header, params=param).json()
 	return my_dataset
 
-accessToken = getAccessToken(clientID,clientSecret,refreshToken)
-X = getStravaActivitesForYear(2023,accessToken)
-print(len(X))
+
+def onlyDateTimesTypesDistanceElevation(activity):
+	return {
+		'date': activity['start_date'],
+		'type': activity['type'],
+		'sport_type': activity['sport_type'],
+		'distance': activity['distance'],
+		'elevationGain': activity['total_elevation_gain']
+		}
+
+def onlyDateTimesTypesDistanceElevationActivityList(activityList):
+	return [onlyDateTypesDistanceElevation(activity) for activity in activityList]
+
+def removeTimefromISODate(isoDate):
+	return isoDate.split('T',1)[0]
+
+def stravaDateToWeek(stravaDate):
+	date = datetime.datetime.strptime(removeTimefromISODate(stravaDate),'%Y-%m-%d')
+	return date.strftime('%W')
 
 def onlyDateTypesDistanceElevation(activity):
 	return {
-		'date': activity['start_date'],
+		'date': removeTimefromISODate(activity['start_date']),
+		'week': stravaDateToWeek(activity['start_date']),
 		'type': activity['type'],
 		'sport_type': activity['sport_type'],
 		'distance': activity['distance'],
@@ -63,11 +77,21 @@ def onlyDateTypesDistanceElevation(activity):
 def onlyDateTypesDistanceElevationActivityList(activityList):
 	return [onlyDateTypesDistanceElevation(activity) for activity in activityList]
 
+clientID = 99657
+clientSecret = "15f516b9c11a1012cb946f137f989d3b83921af5"
+refreshToken = "3084ecda19b970d28fca94b916cb3f44628ea8f6"
+
+accessToken = getAccessToken(clientID,clientSecret,refreshToken)
+X = getStravaActivitesForYear(2023,accessToken)
+print(len(X))
+
+
 Y = onlyDateTypesDistanceElevationActivityList(X)
 
 print(Y)
 
-
+dataFrame = pandas.DataFrame(Y)
+print(dataFrame)
 
 # year = 2023
 # startOfYearAsEpoch = datetime.datetime(year-1,12,30,0,0).timestamp()

@@ -1,6 +1,7 @@
 import requests
 import datetime
 import pandas
+import matplotlib.pyplot as plt
 ### 
 # Step 0: Go to https://www.strava.com/settings/apps and make sure your map is not listed in the "My Apps" tab. If it is listed click revoke access to revoke access. This is necesary as we need to reauthorize it to create a new token with read_all permissions. 
 # Step 1: Edit the URL below, replacing [Your Client Id Here] with the client id of your app. Then enter the URL below into your browser and hit enter
@@ -41,8 +42,12 @@ def getStravaActivitesForYear(year,accessToken):
 	activites_url = "https://www.strava.com/api/v3/athlete/activities"
 	header = {'Authorization': 'Bearer ' + accessToken}
 	param = {'before':endOfYearAsEpoch, 'after':startOfYearAsEpoch, 'page': 1, 'per_page': 200}
-	my_dataset = requests.get(activites_url, headers=header, params=param).json()
-	return my_dataset
+	activityList = requests.get(activites_url, headers=header, params=param).json()
+	dataset = []
+	for activity in activityList:
+		if int(activity['start_date'][:4]) == year:
+			dataset.append(activity)
+	return dataset
 
 
 def onlyDateTimesTypesDistanceElevation(activity):
@@ -62,7 +67,7 @@ def removeTimefromISODate(isoDate):
 
 def stravaDateToWeek(stravaDate):
 	date = datetime.datetime.strptime(removeTimefromISODate(stravaDate),'%Y-%m-%d')
-	return date.strftime('%W')
+	return int(date.strftime('%W'))
 
 def onlyDateTypesDistanceElevation(activity):
 	return {
@@ -77,6 +82,32 @@ def onlyDateTypesDistanceElevation(activity):
 def onlyDateTypesDistanceElevationActivityList(activityList):
 	return [onlyDateTypesDistanceElevation(activity) for activity in activityList]
 
+def activitiesForWeek(week_number, activtiy_list):
+	return [activity for activity in activtiy_list if activity['week'] == week_number]
+
+def totalsForGivenSportType(sport_type, activtiy_list):
+	distance = 0
+	elevaionGain = 0
+	for activity in activtiy_list:
+		if activity['sport_type'] == sport_type:
+			distance += activity['distance']
+			elevaionGain += activity['elevationGain']
+	return {'distance': distance, 'elevationGain': elevaionGain}
+
+def weeklyOverview(week_number, activtiy_list):
+	activtiy_list_week = activitiesForWeek(week_number, activtiy_list)
+	sport_types = set([activity['sport_type'] for activity in activtiy_list_week])
+	weekly_totals = {}
+	for sport in sport_types:
+		weekly_totals[f"{sport.lower()}_elevation"] = (totalsForGivenSportType(sport, activtiy_list_week))['elevationGain']
+		weekly_totals[f"{sport.lower()}_distance"] = (totalsForGivenSportType(sport, activtiy_list_week))['distance']
+	return  weekly_totals
+	# return {sport: totalsForGivenSportType(sport, activtiy_list_week) for sport in sport_types}
+
+def weeklyOverviewForRange(activityList):
+	last_week_number = max([activity['week'] for activity in activityList])
+	return {week_number: weeklyOverview(week_number,activityList) for week_number in range(last_week_number)}
+
 clientID = 99657
 clientSecret = "15f516b9c11a1012cb946f137f989d3b83921af5"
 refreshToken = "3084ecda19b970d28fca94b916cb3f44628ea8f6"
@@ -88,10 +119,29 @@ print(len(X))
 
 Y = onlyDateTypesDistanceElevationActivityList(X)
 
-print(Y)
+Z = activitiesForWeek(13,Y)
 
-dataFrame = pandas.DataFrame(Y)
-print(dataFrame)
+print(pandas.DataFrame(Z))
+
+W = weeklyOverview(13,Y)
+print(W)
+#print(pandas.DataFrame(W))
+
+U = weeklyOverviewForRange(Y)
+print(U)
+df = pandas.DataFrame(U).transpose().fillna(0)
+with pandas.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+     print(df)
+
+df.to_html('temp.html')
+
+# df.plot.bar()
+# plt.show()
+# print(Y)
+
+# dataFrame = pandas.DataFrame(Y)
+# print(dataFrame)
+
 
 # year = 2023
 # startOfYearAsEpoch = datetime.datetime(year-1,12,30,0,0).timestamp()

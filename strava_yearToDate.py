@@ -108,6 +108,8 @@ def weekly_orverviews(activity_list: List[dict], units: Units = "english") -> di
 	last_week_number = max([activity['week'] for activity in activity_list])
 	return {week_number: overview_for_given_week(week_number, activity_list,units) for week_number in range(last_week_number + 1)}
 
+def weekly_orverviews_Datafram(activity_list: List[dict], units: Units = "english") -> pandas.DataFrame:
+	return pandas.DataFrame(weekly_orverviews(activity_list, units)).transpose().fillna(0)
 
 client_id = 99657
 client_secret = "15f516b9c11a1012cb946f137f989d3b83921af5"
@@ -133,7 +135,7 @@ print(U)
 df = pandas.DataFrame(U).transpose().fillna(0)
 with pandas.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
      print(df)
-
+     print(weekly_orverviews_Datafram(Y))
 # df.to_html('temp.html')
 #
 # df.plot.bar()

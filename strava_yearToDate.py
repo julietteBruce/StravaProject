@@ -109,7 +109,13 @@ def weekly_orverviews(activity_list: List[dict], units: Units = "english") -> di
 	return {week_number: overview_for_given_week(week_number, activity_list,units) for week_number in range(last_week_number + 1)}
 
 def weekly_orverviews_Datafram(activity_list: List[dict], units: Units = "english") -> pandas.DataFrame:
-	return pandas.DataFrame(weekly_orverviews(activity_list, units)).transpose().fillna(0)
+	overview_dataframe = pandas.DataFrame(weekly_orverviews(activity_list, units)).transpose().fillna(0)
+	index_level0 = [(column.split('_',1))[0] for column in overview_dataframe.columns]
+	index_level1 = [(column.split('_',1))[1] for column in overview_dataframe.columns]
+	multiindex = [index_level0,index_level1]
+	overview_dataframe.columns = pandas.MultiIndex.from_arrays(multiindex)
+	return overview_dataframe
+
 
 client_id = 99657
 client_secret = "15f516b9c11a1012cb946f137f989d3b83921af5"
@@ -132,11 +138,11 @@ print(W)
 
 U = weekly_orverviews(Y)
 print(U)
-df = pandas.DataFrame(U).transpose().fillna(0)
+df = weekly_orverviews_Datafram(Y)
 with pandas.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
      print(df)
-     print(weekly_orverviews_Datafram(Y))
-# df.to_html('temp.html')
+
+df.to_html('temp.html')
 #
 # df.plot.bar()
 # plt.show()

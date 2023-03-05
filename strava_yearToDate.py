@@ -1,3 +1,4 @@
+import typing
 import requests
 import datetime
 import pandas
@@ -24,7 +25,7 @@ import matplotlib.pyplot as plt
 
 # print(response.text)
 
-def get_access_token(client_id,client_secret,refresh_token):
+def get_access_token(client_id: int, client_secret: str, refresh_token: str) -> str:
 	authorization_url = "https://www.strava.com/oauth/token"
 	data = {
 		'client_id': str(client_id),
@@ -36,18 +37,18 @@ def get_access_token(client_id,client_secret,refresh_token):
 	res = requests.post(authorization_url, data=data)
 	return res.json()['access_token']
 
-def get_activities_for_year(year,access_token):
+def get_activities_for_year(year: int, access_token: str) -> list:
 	start_of_year_epoch = datetime.datetime(year-1,12,30,0,0).timestamp()
 	end_of_year_epoch = datetime.datetime(year+1,1,2,0,0).timestamp()
 	activites_url = "https://www.strava.com/api/v3/athlete/activities"
 	header = {'Authorization': 'Bearer ' + access_token}
 	parameters = {'before':end_of_year_epoch, 'after':start_of_year_epoch, 'page': 1, 'per_page': 200}
-	activity_list = requests.get(activites_url, headers=header, params=parameters).json()
-	dataset = []
-	for activity in activtiy_list:
+	raw_activity_list = requests.get(activites_url, headers=header, params=parameters).json()
+	activity_list = []
+	for activity in raw_activity_list:
 		if int(activity['start_date'][:4]) == year:
-			dataset.append(activity)
-	return dataset
+			activity_list.append(activity)
+	return activity_list
 
 def date_from_iso_datetime(iso_date):
 	return iso_date.split('T',1)[0]
@@ -56,7 +57,7 @@ def strava_date_to_weeknumber(strava_date):
 	date = datetime.datetime.strptime(date_from_iso_datetime(strava_date),'%Y-%m-%d')
 	return int(date.strftime('%W'))
 
-def key_info_from_activity(activity):
+def key_info_from_activity(activity: dict) -> dict:
 	return {
 		'date': date_from_iso_datetime(activity['start_date']),
 		'week': strava_date_to_weeknumber(activity['start_date']),
@@ -66,13 +67,13 @@ def key_info_from_activity(activity):
 		'elevation_gain': activity['total_elevation_gain']
 		}
 
-def key_info_activity_list(activity_list):
+def key_info_activity_list(activity_list: list) -> list:
 	return [key_info_from_activity(activity) for activity in activity_list]
 
-def activities_for_week(week_number, activity_list):
+def activities_for_week(week_number: int, activity_list: list) -> list:
 	return [activity for activity in activity_list if activity['week'] == week_number]
 
-def totals_for_given_sport(sport_type, activity_list):
+def totals_for_given_sport(sport_type: str, activity_list: list) -> dict:
 	distance = 0
 	elevation_gain = 0
 	for activity in activity_list:
@@ -81,7 +82,7 @@ def totals_for_given_sport(sport_type, activity_list):
 			elevation_gain += activity['elevation_gain']
 	return {'distance': distance, 'elevation_gain': elevation_gain}
 
-def overview_for_given_week(week_number, activity_list):
+def overview_for_given_week(week_number: int, activity_list: list) -> dict:
 	activtiy_list_week = activities_for_week(week_number, activity_list)
 	sport_types = set([activity['sport_type'] for activity in activtiy_list_week])
 	weekly_totals = {}
@@ -91,37 +92,38 @@ def overview_for_given_week(week_number, activity_list):
 	return  weekly_totals
 	# return {sport: totalsForGivenSportType(sport, activtiy_list_week) for sport in sport_types}
 
-def weekly_orverviews(activity_list):
+def weekly_orverviews(activity_list: list) -> dict:
 	last_week_number = max([activity['week'] for activity in activity_list])
 	return {week_number: overview_for_given_week(week_number,activity_list) for week_number in range(last_week_number)}
 
-clientID = 99657
-clientSecret = "15f516b9c11a1012cb946f137f989d3b83921af5"
-refreshToken = "3084ecda19b970d28fca94b916cb3f44628ea8f6"
 
-accessToken = getAccessToken(clientID,clientSecret,refreshToken)
-X = getStravaActivitesForYear(2022,accessToken)
+client_id = 99657
+client_secret = "15f516b9c11a1012cb946f137f989d3b83921af5"
+refresh_token = "3084ecda19b970d28fca94b916cb3f44628ea8f6"
+
+access_token = get_access_token(client_id,client_secret,refresh_token)
+X = get_activities_for_year(2022,access_token)
 print(len(X))
 
 
-Y = onlyDateTypesDistanceElevationActivityList(X)
+Y = key_info_activity_list(X)
 
-Z = activitiesForWeek(13,Y)
+Z = activities_for_week(13,Y)
 
 print(pandas.DataFrame(Z))
 
-W = weeklyOverview(13,Y)
+W = overview_for_given_week(13,Y)
 print(W)
 #print(pandas.DataFrame(W))
 
-U = weeklyOverviewForRange(Y)
+U = weekly_orverviews(Y)
 print(U)
 df = pandas.DataFrame(U).transpose().fillna(0)
 with pandas.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
      print(df)
 
-df.to_html('temp.html')
-
+# df.to_html('temp.html')
+#
 # df.plot.bar()
 # plt.show()
 # print(Y)

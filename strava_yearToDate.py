@@ -1,4 +1,4 @@
-import typing
+from typing import List, Dict, Literal
 import requests
 import datetime
 import pandas
@@ -37,7 +37,7 @@ def get_access_token(client_id: int, client_secret: str, refresh_token: str) -> 
 	res = requests.post(authorization_url, data=data)
 	return res.json()['access_token']
 
-def get_activities_for_year(year: int, access_token: str) -> list:
+def get_activities_for_year(year: int, access_token: str) -> List[dict]:
 	start_of_year_epoch = datetime.datetime(year-1,12,30,0,0).timestamp()
 	end_of_year_epoch = datetime.datetime(year+1,1,2,0,0).timestamp()
 	activites_url = "https://www.strava.com/api/v3/athlete/activities"
@@ -67,34 +67,46 @@ def key_info_from_activity(activity: dict) -> dict:
 		'elevation_gain': activity['total_elevation_gain']
 		}
 
-def key_info_activity_list(activity_list: list) -> list:
+def key_info_activity_list(activity_list: List[dict]) -> List[dict]:
 	return [key_info_from_activity(activity) for activity in activity_list]
 
-def activities_for_week(week_number: int, activity_list: list) -> list:
+def activities_for_week(week_number: int, activity_list: List[dict]) -> List[dict]:
 	return [activity for activity in activity_list if activity['week'] == week_number]
 
-def totals_for_given_sport(sport_type: str, activity_list: list) -> dict:
+def convert_meters_to_feet(meters: float) -> float:
+	return round(meters*3.28084,2)
+
+def convert_meters_to_miles(meters: float) -> float:
+	return round(meters*0.000621371,2)
+
+Units = Literal["metric", "english"]
+
+def totals_for_given_sport(sport_type: str, activity_list: list[dict], units: Units = "english") -> dict:
 	distance = 0
 	elevation_gain = 0
 	for activity in activity_list:
 		if activity['sport_type'] == sport_type:
 			distance += activity['distance']
 			elevation_gain += activity['elevation_gain']
-	return {'distance': distance, 'elevation_gain': elevation_gain}
+	if units == "english":
+		return {'distance': convert_meters_to_miles(distance), 'elevation_gain': convert_meters_to_feet(elevation_gain)}
+	elif units == "metric":
+		return {'distance': distance, 'elevation_gain': elevation_gain}
 
-def overview_for_given_week(week_number: int, activity_list: list) -> dict:
+
+def overview_for_given_week(week_number: int, activity_list: List[dict], units: Units = "english") -> dict:
 	activtiy_list_week = activities_for_week(week_number, activity_list)
 	sport_types = set([activity['sport_type'] for activity in activtiy_list_week])
 	weekly_totals = {}
 	for sport in sport_types:
-		weekly_totals[f"{sport.lower()}_elevation"] = (totals_for_given_sport(sport, activtiy_list_week))['elevation_gain']
-		weekly_totals[f"{sport.lower()}_distance"] = (totals_for_given_sport(sport, activtiy_list_week))['distance']
+		weekly_totals[f"{sport.lower()}_elevation"] = (totals_for_given_sport(sport, activtiy_list_week, units))['elevation_gain']
+		weekly_totals[f"{sport.lower()}_distance"] = (totals_for_given_sport(sport, activtiy_list_week, units))['distance']
 	return  weekly_totals
 	# return {sport: totalsForGivenSportType(sport, activtiy_list_week) for sport in sport_types}
 
-def weekly_orverviews(activity_list: list) -> dict:
+def weekly_orverviews(activity_list: List[dict], units: Units = "english") -> dict:
 	last_week_number = max([activity['week'] for activity in activity_list])
-	return {week_number: overview_for_given_week(week_number,activity_list) for week_number in range(last_week_number)}
+	return {week_number: overview_for_given_week(week_number, activity_list,units) for week_number in range(last_week_number + 1)}
 
 
 client_id = 99657
@@ -102,7 +114,7 @@ client_secret = "15f516b9c11a1012cb946f137f989d3b83921af5"
 refresh_token = "3084ecda19b970d28fca94b916cb3f44628ea8f6"
 
 access_token = get_access_token(client_id,client_secret,refresh_token)
-X = get_activities_for_year(2022,access_token)
+X = get_activities_for_year(2023,access_token)
 print(len(X))
 
 

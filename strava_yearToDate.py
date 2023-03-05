@@ -24,89 +24,76 @@ import matplotlib.pyplot as plt
 
 # print(response.text)
 
-def getAccessToken(clientID,clientSecret,refreshToken):
+def get_access_token(client_id,client_secret,refresh_token):
 	authorization_url = "https://www.strava.com/oauth/token"
 	data = {
-		'client_id': str(clientID),
-    	'client_secret': clientSecret,
-    	'refresh_token': refreshToken,
+		'client_id': str(client_id),
+    	'client_secret': client_secret,
+    	'refresh_token': refresh_token,
     	'grant_type': "refresh_token",
     	'f': 'json'
 		}
 	res = requests.post(authorization_url, data=data)
 	return res.json()['access_token']
 
-def getStravaActivitesForYear(year,accessToken):
-	startOfYearAsEpoch = datetime.datetime(year-1,12,30,0,0).timestamp()
-	endOfYearAsEpoch = datetime.datetime(year+1,1,2,0,0).timestamp()
+def get_activities_for_year(year,access_token):
+	start_of_year_epoch = datetime.datetime(year-1,12,30,0,0).timestamp()
+	end_of_year_epoch = datetime.datetime(year+1,1,2,0,0).timestamp()
 	activites_url = "https://www.strava.com/api/v3/athlete/activities"
-	header = {'Authorization': 'Bearer ' + accessToken}
-	param = {'before':endOfYearAsEpoch, 'after':startOfYearAsEpoch, 'page': 1, 'per_page': 200}
-	activityList = requests.get(activites_url, headers=header, params=param).json()
+	header = {'Authorization': 'Bearer ' + access_token}
+	parameters = {'before':end_of_year_epoch, 'after':start_of_year_epoch, 'page': 1, 'per_page': 200}
+	activity_list = requests.get(activites_url, headers=header, params=parameters).json()
 	dataset = []
-	for activity in activityList:
+	for activity in activtiy_list:
 		if int(activity['start_date'][:4]) == year:
 			dataset.append(activity)
 	return dataset
 
+def date_from_iso_datetime(iso_date):
+	return iso_date.split('T',1)[0]
 
-def onlyDateTimesTypesDistanceElevation(activity):
-	return {
-		'date': activity['start_date'],
-		'type': activity['type'],
-		'sport_type': activity['sport_type'],
-		'distance': activity['distance'],
-		'elevationGain': activity['total_elevation_gain']
-		}
-
-def onlyDateTimesTypesDistanceElevationActivityList(activityList):
-	return [onlyDateTypesDistanceElevation(activity) for activity in activityList]
-
-def removeTimefromISODate(isoDate):
-	return isoDate.split('T',1)[0]
-
-def stravaDateToWeek(stravaDate):
-	date = datetime.datetime.strptime(removeTimefromISODate(stravaDate),'%Y-%m-%d')
+def strava_date_to_weeknumber(strava_date):
+	date = datetime.datetime.strptime(date_from_iso_datetime(strava_date),'%Y-%m-%d')
 	return int(date.strftime('%W'))
 
-def onlyDateTypesDistanceElevation(activity):
+def key_info_from_activity(activity):
 	return {
-		'date': removeTimefromISODate(activity['start_date']),
-		'week': stravaDateToWeek(activity['start_date']),
+		'date': date_from_iso_datetime(activity['start_date']),
+		'week': strava_date_to_weeknumber(activity['start_date']),
 		'type': activity['type'],
 		'sport_type': activity['sport_type'],
 		'distance': activity['distance'],
-		'elevationGain': activity['total_elevation_gain']
+		'elevation_gain': activity['total_elevation_gain']
 		}
 
-def onlyDateTypesDistanceElevationActivityList(activityList):
-	return [onlyDateTypesDistanceElevation(activity) for activity in activityList]
+def key_info_activity_list(activity_list):
+	return [key_info_from_activity(activity) for activity in activity_list]
 
-def activitiesForWeek(week_number, activtiy_list):
-	return [activity for activity in activtiy_list if activity['week'] == week_number]
+def activities_for_week(week_number, activity_list):
+	return [activity for activity in activity_list if activity['week'] == week_number]
 
-def totalsForGivenSportType(sport_type, activtiy_list):
+def totals_for_given_sport(sport_type, activity_list):
 	distance = 0
-	elevaionGain = 0
-	for activity in activtiy_list:
+	elevation_gain = 0
+	for activity in activity_list:
 		if activity['sport_type'] == sport_type:
 			distance += activity['distance']
-			elevaionGain += activity['elevationGain']
-	return {'distance': distance, 'elevationGain': elevaionGain}
+			elevation_gain += activity['elevation_gain']
+	return {'distance': distance, 'elevation_gain': elevation_gain}
 
-def weeklyOverview(week_number, activtiy_list):
-	activtiy_list_week = activitiesForWeek(week_number, activtiy_list)
+def overview_for_given_week(week_number, activity_list):
+	activtiy_list_week = activities_for_week(week_number, activity_list)
 	sport_types = set([activity['sport_type'] for activity in activtiy_list_week])
 	weekly_totals = {}
 	for sport in sport_types:
-		weekly_totals[f"{sport.lower()}_elevation"] = (totalsForGivenSportType(sport, activtiy_list_week))['elevationGain']
-		weekly_totals[f"{sport.lower()}_distance"] = (totalsForGivenSportType(sport, activtiy_list_week))['distance']
+		weekly_totals[f"{sport.lower()}_elevation"] = (totals_for_given_sport(sport, activtiy_list_week))['elevation_gain']
+		weekly_totals[f"{sport.lower()}_distance"] = (totals_for_given_sport(sport, activtiy_list_week))['distance']
 	return  weekly_totals
 	# return {sport: totalsForGivenSportType(sport, activtiy_list_week) for sport in sport_types}
 
-def weeklyOverviewForRange(activityList):
-	last_week_number = max([activity['week'] for activity in activityList])
-	return {week_number: weeklyOverview(week_number,activityList) for week_number in range(last_week_number)}
+def weekly_orverviews(activity_list):
+	last_week_number = max([activity['week'] for activity in activity_list])
+	return {week_number: overview_for_given_week(week_number,activity_list) for week_number in range(last_week_number)}
 
 clientID = 99657
 clientSecret = "15f516b9c11a1012cb946f137f989d3b83921af5"
@@ -141,23 +128,5 @@ df.to_html('temp.html')
 
 # dataFrame = pandas.DataFrame(Y)
 # print(dataFrame)
-
-
-# year = 2023
-# startOfYearAsEpoch = datetime.datetime(year-1,12,30,0,0).timestamp()
-# print(startOfYearAsEpoch)
-# todayAsEpoch = datetime.datetime.now().timestamp()
-# print(todayAsEpoch)
-
-# i = 0
-# while i < len(my_dataset):
-# 	print(my_dataset[i]['start_date'])
-# 	print(my_dataset[i]['sport_type'])
-# 	print(my_dataset[i]['distance'])
-# 	print(my_dataset[i]['total_elevation_gain'])
-# 	i += 1
-# print(len(my_dataset))
-
-# sportTypes = {Run,TrailRun,Walk,Hike,RideackcountrySki,}
 
 
